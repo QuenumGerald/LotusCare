@@ -247,38 +247,35 @@ async function sendMessage(text) {
     showTypingIndicator();
     
     try {
-        // Simuler un temps de réponse du serveur
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Cacher l'indicateur de frappe
+        // Appel réel à l'API backend
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [
+                    { role: 'user', content: text }
+                ],
+                systemPrompt: "You are a helpful medical assistant.",
+                temperature: 0.3,
+                max_tokens: 200
+            })
+        });
+        const data = await response.json();
         hideTypingIndicator();
-        
-        // Simuler une réponse du bot (à remplacer par un appel API réel)
-        let response = "Sorry, I can't answer right now. This feature requires an API connection.";
-        
-        // Réponses prédéfinies pour certaines requêtes
-        const lowerText = text.toLowerCase();
-        if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
-            response = "Hello! How can I help you today?";
-        } else if (lowerText.includes('appointment')) {
-            response = "To book an appointment, please provide the desired date and time, as well as the reason for your visit.";
-        } else if (lowerText.includes('medication') || lowerText.includes('medicine')) {
-            response = "To manage your medications, I can help you set up reminders. Which medication is it and how often do you need to take it?";
-        } else if (lowerText.includes('symptom') || lowerText.includes('sick')) {
-            response = "I recommend consulting a doctor for persistent or severe symptoms. Can you describe your symptoms so I can guide you better?";
-        } else if (lowerText.includes('thank')) {
-            response = "You're welcome! Feel free to ask if you have more questions.";
+        if (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+            addBotMessage(data.choices[0].message.content);
+        } else if (data.error) {
+            addBotMessage("Sorry, an error occurred: " + (data.error.message || data.error));
+        } else {
+            addBotMessage("Sorry, I didn't understand the response from the assistant.");
         }
-        
-        // Ajouter la réponse du bot
-        addBotMessage(response);
-        
     } catch (error) {
         console.error("Error sending message:", error);
         hideTypingIndicator();
         addBotMessage("Sorry, an error occurred. Please try again later.");
     }
 }
+
 
 // Initialisation lorsque le DOM est chargé
 document.addEventListener('DOMContentLoaded', () => {
