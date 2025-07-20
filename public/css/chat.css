@@ -24,12 +24,12 @@
 /* Conteneur du chat */
 #chat-container {
     position: fixed;
-    bottom: 100px;
-    right: 30px;
-    width: 350px;
-    height: 500px;
+    bottom: 5vh;
+    right: 5vw;
+    width: 90vw;
+    height: 90vh;
     background: var(--white);
-    border-radius: var(--border-radius);
+    border-radius: 10px;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
@@ -319,7 +319,15 @@
 }
 
 /* Responsive Design */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+    #chat-container {
+        bottom: 1vw;
+        right: 1vw;
+        width: 98vw;
+        height: 98vh;
+        border-radius: 5px;
+    }
+
     .message {
         max-width: 90%;
     }
