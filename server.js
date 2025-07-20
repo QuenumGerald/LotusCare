@@ -13,6 +13,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Proxy to GMI DeepSeek API
 app.post('/api/chat', async (req, res) => {
+  // Log détaillé de la requête reçue
+  console.log('POST /api/chat', JSON.stringify(req.body, null, 2));
   const { messages, systemPrompt, temperature = 0.3, max_tokens = 200 } = req.body;
   try {
     const response = await axios.post(
