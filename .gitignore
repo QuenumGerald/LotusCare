@@ -78,6 +78,9 @@ web_modules/
 .next
 out
 
+# Google service account key
+service-account.json
+
 # Nuxt.js build / generate output
 .nuxt
 dist

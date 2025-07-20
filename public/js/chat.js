@@ -12,6 +12,9 @@ let isChatOpen = false;
 // Éléments du DOM
 let chatContainer, chatMessages, chatInput, sendButton, quickActions, floatingChatBtn;
 
+// Stocke les derniers messages utilisateur pour l'ajout comme description de symptômes
+let lastUserMessages = [];
+
 // Initialisation du chat
 function initChat() {
     // Création de l'interface du chat
@@ -120,6 +123,9 @@ function updateQuickActions() {
 
 // Ajouter un message de l'utilisateur
 function addUserMessage(text) {
+    lastUserMessages.push(text);
+    if (lastUserMessages.length > 5) lastUserMessages.shift(); // Garde les 5 derniers messages
+
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message user-message';
     
@@ -238,6 +244,38 @@ function toggleChat() {
     }
 }
 
+// Fonction pour créer un rendez-vous dans Google Calendar
+async function bookAppointment(patient_name, appointment_time, displayDate, symptoms) {
+    console.log('[LotusCare] Sending booking request:', { patient_name, appointment_time, symptoms });
+    console.log('[LotusCare] Sending booking request:', { patient_name, appointment_time });
+    try {
+        const response = await fetch('/lotuscare/calendar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patient_name, appointment_time, symptoms })
+        });
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            console.log('[LotusCare] Error parsing JSON response:', e);
+            addBotMessage('Error: Invalid response from server.');
+            return;
+        }
+        console.log('[LotusCare] Booking response:', data);
+        if (data.success) {
+            // Affiche la date/heure réservée au format lisible
+            let dateStr = displayDate || new Date(appointment_time).toLocaleString();
+            addBotMessage('Appointment booked for ' + dateStr + ' successfully! 📅');
+        } else {
+            addBotMessage('Failed to book appointment: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.log('[LotusCare] Error during booking fetch:', error);
+        addBotMessage('Error while booking appointment.');
+    }
+}
+
 // Envoyer un message
 async function sendMessage(text) {
     // Ajouter le message de l'utilisateur
@@ -247,6 +285,17 @@ async function sendMessage(text) {
     showTypingIndicator();
     
     try {
+        // Si le message utilisateur concerne un rendez-vous, déclenche la création dans Google Calendar
+        if (/\b(appointment|book appointment)\b/i.test(text)) {
+            hideTypingIndicator();
+            const now = new Date();
+            const patient_name = 'User';
+            // Concatène les derniers messages utilisateur comme symptômes
+            let symptoms = lastUserMessages.filter(m => !/\b(appointment|book appointment)\b/i.test(m)).join(' ');
+            await bookAppointment(patient_name, now.toISOString(), now.toLocaleString(), symptoms);
+            hideTypingIndicator();
+            return;
+        }
         // Appel réel à l'API backend
         const response = await fetch('/api/chat', {
             method: 'POST',
@@ -267,7 +316,7 @@ async function sendMessage(text) {
         } else if (data.error) {
             addBotMessage("Sorry, an error occurred: " + (data.error.message || data.error));
         } else {
-            addBotMessage("Sorry, I didn't understand the response from the assistant.");
+            addBotMessage("I'm here to help. Could you please describe your symptoms or ask your question in another way?");
         }
     } catch (error) {
         console.error("Error sending message:", error);
