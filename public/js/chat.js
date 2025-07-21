@@ -319,15 +319,8 @@ async function sendMessage(text) {
             const msg = data.choices[0].message;
             if (msg.content) {
                 addBotMessage(msg.content);
-            } else if (msg.reasoning_content) {
-                addBotMessage(msg.reasoning_content);
             } else {
-                // Détection automatique des symptômes dans le message utilisateur
-                if (/headache|fever|pain|cough|sick|unwell|throat|tired|nausea|vomit|flu|cold|dizzy|fatigue|stomach|chills|symptom|malade|fièvre|tête|gorge|toux|fatigu/i.test(text)) {
-                    addBotMessage("Thank you for describing your symptoms. Would you like to book a medical appointment?");
-                } else {
-                    addBotMessage("I'm here to help. Could you please describe your symptoms or ask your question in another way?");
-                }
+                addBotMessage("I'm here to help. Could you please rephrase your symptoms or would you like to book a medical appointment?");
             }
         } else if (data && data.error) {
             addBotMessage("Sorry, an error occurred: " + (data.error.message || data.error));
