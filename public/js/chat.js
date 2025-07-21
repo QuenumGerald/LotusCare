@@ -280,48 +280,60 @@ async function bookAppointment(patient_name, appointment_time, displayDate, symp
 async function sendMessage(text) {
     // Ajouter le message de l'utilisateur
     addUserMessage(text);
-    
-    // Afficher l'indicateur de frappe
+
+    // Si c'est une demande de rendez-vous, saute l'IA et va direct à la réservation
+    if (/\b(appointment|book appointment)\b/i.test(text)) {
+        showTypingIndicator();
+        hideTypingIndicator();
+        const now = new Date();
+        const patient_name = 'User';
+        // Concatène les derniers messages utilisateur comme symptômes
+        const symptoms = lastUserMessages.join(' ');
+        await bookAppointment(patient_name, now.toISOString(), now.toLocaleString(), symptoms);
+        return;
+    }
+
+    // Sinon, toujours interroger l'IA
     showTypingIndicator();
-    
     try {
-        // Si le message utilisateur concerne un rendez-vous, déclenche la création dans Google Calendar
-        if (/\b(appointment|book appointment)\b/i.test(text)) {
-            hideTypingIndicator();
-            const now = new Date();
-            const patient_name = 'User';
-            // Concatène les derniers messages utilisateur comme symptômes
-            let symptoms = lastUserMessages.filter(m => !/\b(appointment|book appointment)\b/i.test(m)).join(' ');
-            await bookAppointment(patient_name, now.toISOString(), now.toLocaleString(), symptoms);
-            hideTypingIndicator();
-            return;
+        // Détection d'intention simple
+        let systemPrompt = "You are LotusCare, a friendly and professional medical assistant. Your role is to help patients with:\n- Booking and managing appointments\n- Setting medication reminders\n- Answering questions about medical records and visits\n\nGuidelines:\n- Be empathetic and patient\n- Use clear, simple language\n- Maintain strict patient confidentiality\n- Always verify critical information\n- Provide concise, relevant responses";
+        // Si symptômes détectés, on peut spécialiser le prompt
+        if (/headache|fever|pain|cough|sick|unwell|throat|tired|nausea|vomit|flu|cold|dizzy|fatigue|stomach|chills|symptom|malade|fièvre|tête|gorge|toux|fatigu/i.test(text)) {
+            systemPrompt = "You are LotusCare, a friendly and professional medical assistant. The user is describing symptoms. Do not give any medical advice or suggestions. Simply acknowledge or restate the user's symptoms in one sentence, then always ask: 'Would you like to book a medical appointment?'";
         }
-        // Appel réel à l'API backend
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [
-                    { role: 'user', content: text }
-                ],
-                systemPrompt: "You are a helpful medical assistant.",
+                messages: [{ role: 'user', content: text }],
+                systemPrompt,
                 temperature: 0.3,
                 max_tokens: 200
             })
         });
         const data = await response.json();
         hideTypingIndicator();
-        if (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-            addBotMessage(data.choices[0].message.content);
-        } else if (data.error) {
+
+        if (data && data.choices && data.choices[0] && data.choices[0].message) {
+            const msg = data.choices[0].message;
+            if (msg.content) {
+                addBotMessage(msg.content);
+            } else if (msg.reasoning_content) {
+                addBotMessage(msg.reasoning_content);
+            } else {
+                // Détection automatique des symptômes dans le message utilisateur
+                if (/headache|fever|pain|cough|sick|unwell|throat|tired|nausea|vomit|flu|cold|dizzy|fatigue|stomach|chills|symptom|malade|fièvre|tête|gorge|toux|fatigu/i.test(text)) {
+                    addBotMessage("Thank you for describing your symptoms. Would you like to book a medical appointment?");
+                } else {
+                    addBotMessage("I'm here to help. Could you please describe your symptoms or ask your question in another way?");
+                }
+            }
+        } else if (data && data.error) {
             addBotMessage("Sorry, an error occurred: " + (data.error.message || data.error));
         } else {
-            // Détection automatique des symptômes dans le message utilisateur
-            if (/headache|fever|pain|cough|sick|unwell|throat|tired|nausea|vomit|flu|cold|dizzy|fatigue|stomach|chills|symptom|malade|fièvre|tête|gorge|toux|fatigu/i.test(text)) {
-                addBotMessage("Thank you for describing your symptoms. Would you like to book a medical appointment?");
-            } else {
-                addBotMessage("I'm here to help. Could you please describe your symptoms or ask your question in another way?");
-            }
+            // fallback
+            addBotMessage("I'm here to help. Could you please describe your symptoms or ask your question in another way?");
         }
     } catch (error) {
         console.error("Error sending message:", error);

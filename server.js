@@ -72,7 +72,7 @@ app.post('/api/chat', async (req, res) => {
     const response = await axios.post(
       'https://api.gmi-serving.com/v1/chat/completions',
       {
-        model: "deepseek-ai/DeepSeek-R1-0528",
+        model: "Qwen/Qwen3-32B-FP8",
         messages: [
           ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
           ...messages
@@ -87,6 +87,7 @@ app.post('/api/chat', async (req, res) => {
         }
       }
     );
+    console.log('[DeepSeek API response]', JSON.stringify(response.data, null, 2));
     res.json(response.data);
   } catch (error) {
     console.error('Error from GMI API:', error.response?.data || error.message);

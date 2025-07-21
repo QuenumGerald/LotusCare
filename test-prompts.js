@@ -12,7 +12,14 @@ async function testPrompt(intent, slots = {}) {
     
     const response = await callDeepSeekAPI(messages);
     console.log('\n=== API Response ===');
-    console.log(response.choices[0].message.content);
+    const msg = response.choices[0].message;
+    if (msg.content) {
+      console.log(msg.content);
+    } else if (msg.reasoning_content) {
+      console.log('[reasoning_content]', msg.reasoning_content);
+    } else {
+      console.log('[No response in content or reasoning_content]');
+    }
     
   } catch (error) {
     console.error('Error:', error.message);
